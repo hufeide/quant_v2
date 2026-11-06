@@ -1,0 +1,30 @@
+# 冒烟测试配置：只跑 pullback 一个子账户，短区间，用于验证链路
+extends: config.yaml
+
+project:
+  name: quant_sse50_smoke
+
+data:
+  start_date: "2025-01-01"
+  end_date: "2026-11-05"
+  max_symbols: 8
+  min_bars: 100
+
+accounts:
+  cash_reserve: 0.20
+  subaccounts:
+    - name: a_pullback
+      strategy: pullback
+      weight: 0.80
+      enabled: true
+      params:
+        ma_trend: 60
+        ma_pullback: 20
+        pullback_tolerance: 0.02
+        volume_ma: 20
+        volume_shrink_ratio: 0.70
+        rsi_period: 14
+        rsi_max: 65
+      risk:
+        max_positions: 4
+        max_hold_days: 20

@@ -1,0 +1,16 @@
+{
+  "start_value": 800000.0,
+  "end_value": 842028.05,
+  "total_return": 0.0525,
+  "annual_return": 0.0282,
+  "annual_volatility": 0.0574,
+  "sharpe": 0.1865,
+  "max_drawdown": -0.0489,
+  "calmar": 0.5773,
+  "trades": 41,
+  "win_rate": 0.4878,
+  "avg_win": 8408.59,
+  "avg_loss": -6006.84,
+  "profit_factor": 1.3332,
+  "total_commission": 6154.56
+}

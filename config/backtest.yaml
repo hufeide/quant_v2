@@ -1,0 +1,19 @@
+# 回测配置：继承 config.yaml，指定回测区间与产物目录
+extends: config.yaml
+
+project:
+  name: quant_sse50_backtest
+
+engine:
+  run_mode: backtest
+
+universe:
+  mode: historical               # 正式回测：按历史调样时间线逐日切片
+
+data:
+  start_date: "2023-01-01"
+  end_date: "2026-11-05"
+  refresh: incremental
+
+broker:
+  cash: 1000000.0

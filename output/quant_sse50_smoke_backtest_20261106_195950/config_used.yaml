@@ -1,0 +1,96 @@
+project:
+  name: quant_sse50_smoke
+paths:
+  data_dir: /home/administator/workspace/temp_20261106_01/data
+  output_dir: /home/administator/workspace/temp_20261106_01/output
+data:
+  provider: auto
+  universe_source: csindex
+  index_code: '000016'
+  universe_name: sse50
+  universe_ttl_days: 30
+  cache_dir: /home/administator/workspace/temp_20261106_01/data/cache/daily
+  universe_dir: /home/administator/workspace/temp_20261106_01/data/cache/universe
+  fallback_universe: /home/administator/workspace/temp_20261106_01/data/universe/sse50_snapshot.csv
+  adjust: qfq
+  start_date: '2025-01-01'
+  end_date: '2026-11-05'
+  warmup_calendar_days: 260
+  min_bars: 100
+  refresh: incremental
+  request_interval: 0.35
+  max_symbols: 8
+  exclude_symbols: []
+universe:
+  mode: current
+  historical:
+    provider: baostock
+    timeline_file: data/cache/universe/sse50_timeline.csv
+    sample_step_days: 5
+    refresh: auto
+    max_age_days: 7
+constraints:
+  enabled: true
+  max_pending_bars: 10
+  limit:
+    enabled: true
+    main: 0.1
+    star: 0.2
+    chinext: 0.2
+    bse: 0.3
+    st: 0.05
+    st_symbols: []
+    tick: 0.01
+  suspension:
+    enabled: true
+    require_volume: true
+  participation:
+    enabled: true
+    max_rate: 0.1
+engine:
+  run_mode: backtest
+  lot_size: 100
+  trading_days_per_year: 252
+  risk_free_rate: 0.02
+  verbose: false
+  trade_start: null
+broker:
+  cash: 1000000.0
+  commission: 0.0003
+  min_commission: 5.0
+  stamp_duty: 0.0005
+  slippage_perc: 0.001
+  slippage_open: true
+risk_defaults:
+  max_positions: 8
+  max_total_exposure_pct: 0.95
+  max_position_pct: 0.25
+  atr_multiple: 2.5
+  take_profit_atr: 5.0
+  trailing_stop_atr: 0.0
+  max_hold_days: 30
+  max_drawdown_stop: 0.35
+  max_daily_entries: 3
+sizer_defaults:
+  risk_per_trade_pct: 0.01
+  atr_multiple: 2.5
+  max_position_pct: 0.25
+  min_stop_pct: 0.015
+accounts:
+  cash_reserve: 0.2
+  subaccounts:
+  - name: a_pullback
+    strategy: pullback
+    weight: 0.8
+    enabled: true
+    params:
+      ma_trend: 60
+      ma_pullback: 20
+      pullback_tolerance: 0.02
+      volume_ma: 20
+      volume_shrink_ratio: 0.7
+      rsi_period: 14
+      rsi_max: 65
+    risk:
+      max_positions: 4
+      max_hold_days: 20

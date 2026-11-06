@@ -1,0 +1,22 @@
+# 实盘/纸面跟踪配置：继承 config.yaml
+# 说明：本工程只做回测与纸面推演，不接入券商交易接口。
+# run_mode=paper 时复用回测引擎，只更新数据到最近交易日并输出当前信号/持仓草案。
+extends: config.yaml
+
+project:
+  name: quant_sse50_paper
+
+engine:
+  run_mode: paper
+
+data:
+  start_date: "2024-01-01"
+  end_date: "2026-11-05"
+  refresh: incremental
+  request_interval: 0.5
+
+broker:
+  cash: 500000.0
+
+accounts:
+  cash_reserve: 0.20

@@ -1,0 +1,164 @@
+# =====================================================================
+# 基础配置（所有参数外置，代码中不出现魔法数字）
+# 其余配置（backtest.yaml / live.yaml）通过 extends 继承本文件并覆盖
+# =====================================================================
+
+project:
+  name: quant_sse50
+
+paths:
+  data_dir: data
+  output_dir: output
+
+data:
+  provider: auto                 # auto | akshare_em | akshare_sina | tencent | baostock | cache
+  universe_source: csindex       # csindex | sina
+  index_code: "000016"           # 上证50
+  universe_name: sse50
+  universe_ttl_days: 30          # 成分股列表缓存有效期
+  cache_dir: data/cache/daily
+  universe_dir: data/cache/universe
+  fallback_universe: data/universe/sse50_snapshot.csv   # 无网络时的兜底成分股
+  adjust: qfq                    # 前复权
+  start_date: "2023-01-01"       # 回测/统计区间起点
+  end_date: "2026-11-05"         # 区间终点
+  warmup_calendar_days: 260      # 指标预热：向前多取的自然日
+  min_bars: 300                  # 区间内最少交易日数，否则剔除
+  refresh: incremental           # incremental | full | cache_only
+  request_interval: 0.35         # 秒/次，限速
+  max_symbols: 50
+  exclude_symbols: []
+
+# 标的池口径：current = 当前成分股回填历史（有生存者偏差）
+#           historical = 按 BaoStock 历史调样时间线逐日切片（无生存者偏差）
+universe:
+  mode: current                  # current | historical
+  historical:
+    provider: baostock
+    timeline_file: data/cache/universe/sse50_timeline.csv
+    sample_step_days: 5          # 采样粒度（自然日），检测到变更后再逐日回查定位生效日
+    refresh: auto                # auto | force | cache_only
+    max_age_days: 7              # 缓存超过 N 天自动重建
+
+# 成交约束：涨跌停 / 停牌 / 成交量参与率
+constraints:
+  enabled: true
+  max_pending_bars: 10           # 连续被拒超过 N 个交易日后撤单并记录
+  limit:
+    enabled: true
+    main: 0.10                   # 主板 ±10%
+    star: 0.20                   # 科创板 ±20%
+    chinext: 0.20                # 创业板 ±20%
+    bse: 0.30                    # 北交所 ±30%
+    st: 0.05                     # 主板 ST ±5%（科创/创业板 ST 仍 20%）
+    st_symbols: []               # 知道 ST 代码时显式列出；否则按名称含 "ST" 近似判定
+    tick: 0.01                   # 涨跌停价按 0.01 元四舍五入
+  suspension:
+    enabled: true
+    require_volume: true         # 成交量为 0 / 缺失视为无法成交
+  participation:
+    enabled: true
+    max_rate: 0.10               # 单笔不超过当日成交量的 10%，超出部分次日续挂
+
+engine:
+  run_mode: backtest             # backtest | paper
+  lot_size: 100                  # A 股一手 100 股
+  trading_days_per_year: 252
+  risk_free_rate: 0.02
+  verbose: false
+  trade_start: null              # null 表示从 data.start_date 开始；可填 "2023-02-01"
+
+broker:
+  cash: 1000000.0                # 总账户初始资金
+  commission: 0.0003             # 券商佣金（双边，按成交额）
+  min_commission: 5.0            # 单笔最低佣金
+  stamp_duty: 0.0005             # 印花税（仅卖出）
+  slippage_perc: 0.001           # 滑点（按价格百分比）
+  slippage_open: true
+
+# 子账户公共风控/仓位默认值，可在每个 subaccount 下覆盖
+risk_defaults:
+  max_positions: 8               # 子账户最大持仓只数
+  max_total_exposure_pct: 0.95   # 子账户最大总仓位（占子账户净值）
+  max_position_pct: 0.25         # 单票最大市值占比
+  atr_multiple: 2.5              # 止损距离 = ATR * multiple
+  take_profit_atr: 5.0           # 止盈距离（ATR 倍数），0 表示不启用
+  trailing_stop_atr: 0.0         # 移动止损（ATR 倍数），0 表示不启用
+  max_hold_days: 30              # 最大持有交易日
+  max_drawdown_stop: 0.35        # 子账户回撤超过则停止开新仓
+  max_daily_entries: 3           # 每日最多新开仓只数
+
+sizer_defaults:
+  risk_per_trade_pct: 0.01
+  atr_multiple: 2.5
+  max_position_pct: 0.25
+  min_stop_pct: 0.015
+
+accounts:
+  cash_reserve: 0.20             # 现金池比例（不参与交易，只计入总净值）
+  subaccounts:
+    - name: a_pullback
+      strategy: pullback
+      weight: 0.25
+      enabled: true
+      params:
+        ma_trend: 60
+        ma_pullback: 20
+        pullback_tolerance: 0.02
+        volume_ma: 20
+        volume_shrink_ratio: 0.70
+        rsi_period: 14
+        rsi_max: 65
+      risk:
+        max_positions: 8
+        max_hold_days: 20
+      sizer:
+        max_position_pct: 0.25
+    - name: b_breakout
+      strategy: breakout
+      weight: 0.25
+      enabled: true
+      params:
+        lookback: 20
+        breakout_buffer: 0.005
+        volume_ma: 20
+        volume_ratio: 1.5
+        ma_trend: 60
+        atr_period: 14
+      risk:
+        max_positions: 8
+        max_hold_days: 30
+        take_profit_atr: 6.0
+      sizer:
+        max_position_pct: 0.25
+    - name: c_oversold
+      strategy: oversold
+      weight: 0.15
+      enabled: true
+      params:
+        rsi_period: 14
+        rsi_oversold: 30
+        ma_filter: 20
+        drop_pct: 0.10
+        atr_period: 14
+      risk:
+        max_positions: 5
+        max_hold_days: 15
+        take_profit_atr: 4.0
+        max_position_pct: 0.20
+    - name: d_momentum
+      strategy: momentum
+      weight: 0.15
+      enabled: true
+      params:
+        ma_fast: 20
+        ma_slow: 60
+        roc_period: 20
+        roc_min: 0.05
+        volume_ma: 20
+        atr_period: 14
+      risk:
+        max_positions: 6
+        max_hold_days: 40
+        trailing_stop_atr: 3.0
+        max_position_pct: 0.25
